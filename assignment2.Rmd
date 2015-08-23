@@ -1,0 +1,533 @@
+# Effect of Weather Events on Population Health and Economy
+
+This analysis aims to find which events have the most impact on both population health and economy. The analysis will separate the data into two subsets, one that will be used to analyse the impact of events to population health, and another for economy.
+
+The impact on population health shall be measured by the number of fatalities and injuries caused by the events. The impact on economy shall be measured by the total damage to the economy, indicated by the property damage and crop damage.
+
+The result is presented by comparing the top ten events for each category, impact on population health and impact on economy.
+
+## Requirements
+
+This analysis requires ggplot2 library.
+
+
+## Data Processing
+
+The data for this assignment is downloaded from the source specified in the course website, and subset into two different datasets, one for the first question (the impact of weather events to population health) and another one for the second question (the impact of weather events to Economy)
+
+
+``` {r downloadData, cache=TRUE}
+
+# cache this step as the execution takes a long time and the source data is unlikely to change
+url <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(url, "data.csv.bz2", mode="wb")
+stormdata <- read.csv('data.csv.bz2')
+
+```
+
+
+It was identified in the data set that event types contain many variations and need to be standardized. The clean_event function is created to standardize the event types.
+
+
+``` {r commonFunction, message=F, warning=F}
+
+clean_event <- function(dataframe){
+    # convert to characters
+    dataframe["EVTYPE"] <- lapply(dataframe["EVTYPE"], as.character)
+    
+    # all the mappings
+    dataframe[dataframe$EVTYPE == 'AVALANCE',"EVTYPE"] <- "AVALANCHE"
+    dataframe[dataframe$EVTYPE == 'BLIZZARD/WINTER STORM',"EVTYPE"] <- "BLIZZARD"
+    dataframe[dataframe$EVTYPE == 'blowing snow',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'COASTAL  FLOODING/EROSION',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'Coastal Flood',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'Beach Erosion',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'COASTAL EROSION',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'Coastal Flooding',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'COASTAL FLOODING',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'COASTAL FLOODING/EROSION',"EVTYPE"] <- "COASTAL FLOOD"
+    dataframe[dataframe$EVTYPE == 'Coastal Storm',"EVTYPE"] <- "COASTAL STORM"
+    dataframe[dataframe$EVTYPE == 'COASTAL STORM',"EVTYPE"] <- "COASTAL STORM"
+    dataframe[dataframe$EVTYPE == 'COASTALSTORM',"EVTYPE"] <- "COASTAL STORM"
+    dataframe[dataframe$EVTYPE == 'Cold',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD AND SNOW',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'Cold Temperature',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD WAVE',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD WEATHER',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD/WINDS',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'EXTREME WIND CHIL',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD/FLOOD',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOODING',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOODING/FLOOD',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOODS',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD - HEAVY RAIN',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD FROM ICE JAMS',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD LANDSLIDES',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD WINDS',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD/',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD/ STREET',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOOD/LANDSLIDE',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLASH FLOODING/THUNDERSTORM WI',"EVTYPE"] <- "FLASH FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD FLASH',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/FLASH',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/FLASH/FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD & HEAVY RAIN',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/FLASH FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/RIVER FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/FLASHFLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOOD/RAIN/WINDS',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOODING/HEAVY RAIN',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'FLOODS',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'RIVER AND STREAM FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'RURAL FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'MUD SLIDES URBAN FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'BREAKUP FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'MAJOR FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'Heat Wave',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'HEAT WAVE DROUGHT',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'HEAT WAVES',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'EXCESSIVE HEAT',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'EXTREME HEAT',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAINS',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'High Surf',"EVTYPE"] <- "HIGH SURF"
+    dataframe[dataframe$EVTYPE == 'Heavy surf and wind',"EVTYPE"] <- "HEAVY SURF"
+    dataframe[dataframe$EVTYPE == 'HEAVY SURF/HIGH SURF',"EVTYPE"] <- "HEAVY SURF"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND 48',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND AND SEAS',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND/HEAVY SNOW',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND/SEAS',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS/COLD',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS/SNOW',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND (G40)',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND DAMAGE',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WIND/BLIZZARD',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS HEAVY RAINS',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS/',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS/COASTAL FLOOD',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH WINDS/HEAVY RAIN',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HIGH  WINDS',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'HURRICANE-GENERATED SWELLS',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'Hurricane Edouard',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE EMILY',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE ERIN',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE FELIX',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE OPAL',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE OPAL/HIGH WINDS',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HURRICANE/TYPHOON',"EVTYPE"] <- "HURRICANE"
+    dataframe[dataframe$EVTYPE == 'HYPERTHERMIA/EXPOSURE',"EVTYPE"] <- "HYPOTHERMIA"
+    dataframe[dataframe$EVTYPE == 'Hypothermia/Exposure',"EVTYPE"] <- "HYPOTHERMIA"
+    dataframe[dataframe$EVTYPE == 'HYPOTHERMIA/EXPOSURE',"EVTYPE"] <- "HYPOTHERMIA"
+    dataframe[dataframe$EVTYPE == 'ICE ON ROAD',"EVTYPE"] <- "ICE"
+    dataframe[dataframe$EVTYPE == 'ICE ROADS',"EVTYPE"] <- "ICE"
+    dataframe[dataframe$EVTYPE == 'ICE STORM/FLASH FLOOD',"EVTYPE"] <- "ICE"
+    dataframe[dataframe$EVTYPE == 'DRY MIRCOBURST WINDS',"EVTYPE"] <- "DRY MICROBURST"
+    dataframe[dataframe$EVTYPE == 'Dust Devil',"EVTYPE"] <- "DUST DEVIL"
+    dataframe[dataframe$EVTYPE == 'Extreme Cold',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'EXTREME COLD',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'EXTREME COLD/WIND CHILL',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'Extended Cold',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'EXTREME WINDCHILL',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COLD AND WET CONDITIONS',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'COOL AND WET',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'GLAZE/ICE STORM',"EVTYPE"] <- "GLAZE"
+    dataframe[dataframe$EVTYPE == 'Gusty winds',"EVTYPE"] <- "GUSTY WIND"
+    dataframe[dataframe$EVTYPE == 'Gusty Winds',"EVTYPE"] <- "GUSTY WIND"
+    dataframe[dataframe$EVTYPE == 'GUSTY WINDS',"EVTYPE"] <- "GUSTY WIND"
+    dataframe[dataframe$EVTYPE == 'HEAT WAVE',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING AND THUNDERSTORM WIN',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING INJURY',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING.',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTING',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING  WAUSEON',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING AND HEAVY RAIN',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING FIRE',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING THUNDERSTORM WINDS',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGHTNING/HEAVY RAIN',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'LIGNTNING',"EVTYPE"] <- "LIGHTNING"
+    dataframe[dataframe$EVTYPE == 'Marine Accident',"EVTYPE"] <- "MARINE MISHAP"
+    dataframe[dataframe$EVTYPE == 'MARINE HIGH WIND',"EVTYPE"] <- "HIGH WIND"
+    dataframe[dataframe$EVTYPE == 'MARINE TSTM WIND',"EVTYPE"] <- "MARINE THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'Mudslides',"EVTYPE"] <- "Mudslide"
+    dataframe[dataframe$EVTYPE == 'RECORD COLD',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'RECORD HEAT',"EVTYPE"] <- "EXCESSIVE HEAT"
+    dataframe[dataframe$EVTYPE == 'RECORD/EXCESSIVE HEAT',"EVTYPE"] <- "EXCESSIVE HEAT"
+    dataframe[dataframe$EVTYPE == 'RIP CURRENTS',"EVTYPE"] <- "RIP CURRENT"
+    dataframe[dataframe$EVTYPE == 'RIP CURRENTS/HEAVY SURF',"EVTYPE"] <- "RIP CURRENT"
+    dataframe[dataframe$EVTYPE == 'RIVER FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'River Flooding',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'RIVER FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'Snow',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW AND ICE',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW SQUALL',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'Snow Squalls',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/ BITTER COLD',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/HIGH WINDS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW ACCUMULATION',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW AND HEAVY SNOW',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW AND ICE STORM',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW FREEZING RAIN',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW SQUALLS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/ ICE',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/BLOWING SNOW',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/COLD',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/FREEZING RAIN',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/HEAVY SNOW',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/ICE',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/ICE STORM',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/SLEET',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW/SLEET/FREEZING RAIN',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOWMELT FLOODING',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'EXCESSIVE SNOW',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'STORM SURGE',"EVTYPE"] <- "STORM SURGE/TIDE"
+    dataframe[dataframe$EVTYPE == 'Strong Winds',"EVTYPE"] <- "STRONG WIND"
+    dataframe[dataframe$EVTYPE == 'STRONG WINDS',"EVTYPE"] <- "STRONG WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSNOW',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM  WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND (G40)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND G52',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS 13',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS/HAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDSS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUDERSTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDEERSTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERESTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM DAMAGE TO',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM HAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND 60 MPH',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND 65 MPH',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND 65MPH',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND 98 MPH',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND G50',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND G55',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND G60',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND TREES',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND.',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND/ TREE',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND/ TREES',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND/AWNING',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND/HAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WIND/LIGHTNING',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS 63 MPH',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS AND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS G60',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS HAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS.',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS/ FLOOD',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS/FLOODING',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS/FUNNEL CLOU',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDS53',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINDSHAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORM WINS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORMS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORMS WIND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORMS WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORMW',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTORMWINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERSTROM WIND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNDERTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'THUNERSTORM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'Tidal Flooding',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'TIDAL FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'TORNADO F2',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNADO F3',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'ORNADOES, TSTM WIND, HAIL',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNADO F0',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNADO F1',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNADOES',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNADOES, TSTM WIND, HAIL',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TORNDAO',"EVTYPE"] <- "TORNADO"
+    dataframe[dataframe$EVTYPE == 'TROPICAL STORM',"EVTYPE"] <- "TROPICAL STORM"
+    dataframe[dataframe$EVTYPE == 'TROPICAL STORM GORDON',"EVTYPE"] <- "TROPICAL STORM"
+    dataframe[dataframe$EVTYPE == 'TROPICAL STORM ALBERTO',"EVTYPE"] <- "TROPICAL STORM"
+    dataframe[dataframe$EVTYPE == 'TROPICAL STORM DEAN',"EVTYPE"] <- "TROPICAL STORM"
+    dataframe[dataframe$EVTYPE == 'TROPICAL STORM JERRY',"EVTYPE"] <- "TROPICAL STORM"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND (G35)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND (G40)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND (G45)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND/HAIL',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'Tstm Wind',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND  (G45)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND (41)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND 40',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND 45',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND 55',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND 65)',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND AND LIGHTNING',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND DAMAGE',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND G45',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WIND G58',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTM WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'TSTMW',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'SEVERE THUNDERSTORM',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'UNSEASONABLY COLD',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'Unseasonable Cold',"EVTYPE"] <- "COLD/WIND CHILL"
+    dataframe[dataframe$EVTYPE == 'UNSEASONABLY WARM',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'UNSEASONABLY WARM AND DRY',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'URBAN AND SMALL STREAM FLOODIN',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN/SML STREAM FLD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN AND SMALL',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN FLOODING',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN FLOODS',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN SMALL',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN/SMALL STREAM',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'URBAN/SMALL STREAM FLOOD',"EVTYPE"] <- "FLOOD"
+    dataframe[dataframe$EVTYPE == 'WARM WEATHER',"EVTYPE"] <- "HEAT"
+    dataframe[dataframe$EVTYPE == 'WATERSPOUT TORNADO',"EVTYPE"] <- "WATERSPOUT"
+    dataframe[dataframe$EVTYPE == 'WATERSPOUT/TORNADO',"EVTYPE"] <- "WATERSPOUT"
+    dataframe[dataframe$EVTYPE == 'WATERSPOUT-',"EVTYPE"] <- "WATERSPOUT"
+    dataframe[dataframe$EVTYPE == 'WATERSPOUT-TORNADO',"EVTYPE"] <- "WATERSPOUT"
+    dataframe[dataframe$EVTYPE == 'WATERSPOUT/ TORNADO',"EVTYPE"] <- "WATERSPOUT"
+    dataframe[dataframe$EVTYPE == 'WIND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'BRUSH FIRE',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WILD/FOREST FIRE',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WILD FIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WILD/FOREST FIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WILD FIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'FOREST FIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WILDFIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'GRASS FIRES',"EVTYPE"] <- "WILDFIRE"
+    dataframe[dataframe$EVTYPE == 'WIND',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'WINDS',"EVTYPE"] <- "THUNDERSTORM WIND"
+    dataframe[dataframe$EVTYPE == 'WINTER STORM',"EVTYPE"] <- "WINTER STORM"
+    dataframe[dataframe$EVTYPE == 'WINTER STORMS',"EVTYPE"] <- "WINTER STORM"
+    dataframe[dataframe$EVTYPE == 'WINTER STORM HIGH WINDS',"EVTYPE"] <- "WINTER STORM"
+    dataframe[dataframe$EVTYPE == 'WINTER WEATHER MIX',"EVTYPE"] <- "WINTER WEATHER"
+    dataframe[dataframe$EVTYPE == 'WINTER WEATHER/MIX',"EVTYPE"] <- "WINTER WEATHER"
+    dataframe[dataframe$EVTYPE == 'WINTRY MIX',"EVTYPE"] <- "WINTER WEATHER"
+    dataframe[dataframe$EVTYPE == 'Wintry Mix',"EVTYPE"] <- "WINTER WEATHER"
+    dataframe[dataframe$EVTYPE == 'FREEZING RAIN/SNOW',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Freezing Spray',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FREEZING DRIZZLE',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Freeze',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Freezing drizzle',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Freezing Drizzle',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FREEZING FOG',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Freezing Rain',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FREEZING RAIN',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FREEZING RAIN/SLEET',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FROST',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Frost/Freeze',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FROST/FREEZE',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'FROST\\FREEZE',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Damaging Freeze',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'DAMAGING FREEZE',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Early Frost',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'Damaging Freeze',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'DAMAGING FREEZE',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == ' Early Frost',"EVTYPE"] <- "FREEZE"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW AND HIGH WINDS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'Heavy snow shower',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/BLIZZARD/AVALANCHE',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/ICE',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW-SQUALLS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW AND STRONG WINDS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'SNOW',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW SQUALLS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/BLIZZARD',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/FREEZING RAIN',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/HIGH WINDS & FLOOD',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/SQUALLS',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/WIND',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOW/WINTER STORM',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'HEAVY SNOWPACK',"EVTYPE"] <- "HEAVY SNOW"
+    dataframe[dataframe$EVTYPE == 'Whirlwind',"EVTYPE"] <- "WHIRLWIND"
+    dataframe[dataframe$EVTYPE == 'HAIL 0.75',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 075',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 100',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 125',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 150',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 175',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 200',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 275',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 450',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL 75',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL DAMAGE',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL/WIND',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAIL/WINDS',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'HAILSTORM',"EVTYPE"] <- "HAIL"
+    dataframe[dataframe$EVTYPE == 'Strong Wind',"EVTYPE"] <- "STRONG WIND"
+    dataframe[dataframe$EVTYPE == 'BLOWING DUST',"EVTYPE"] <- "DUST STORM"
+    dataframe[dataframe$EVTYPE == 'DUST STORM/HIGH WINDS',"EVTYPE"] <- "DUST STORM"
+    dataframe[dataframe$EVTYPE == 'DUST DEVIL WATERSPOUT',"EVTYPE"] <- "DUST DEVIL"
+    dataframe[dataframe$EVTYPE == 'EXCESSIVE WETNESS',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY MIX',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY PRECIPITATION',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAIN AND FLOOD',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'Heavy Rain/High Surf',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAIN/LIGHTNING',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAIN/SEVERE WEATHER',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAIN/SMALL STREAM URBAN',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAIN/SNOW',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY RAINS/FLOODING',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HEAVY SHOWER',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'HVY RAIN',"EVTYPE"] <- "HEAVY RAIN"
+    dataframe[dataframe$EVTYPE == 'Heavy Surf',"EVTYPE"] <- "HIGH SURF"
+    dataframe[dataframe$EVTYPE == 'HEAVY SURF COASTAL FLOODING',"EVTYPE"] <- "HIGH SURF"
+    
+    # convert back to vectors
+    dataframe["EVTYPE"] <- lapply(dataframe["EVTYPE"], as.factor)
+    return(dataframe)
+}
+
+
+```
+
+The analysis shall create two subsets, one subset for each question.
+
+For the impact on population health question, the subset shall contain the event type (EVTYPE), number of fatalities (FATALITIES), and number of injuries (INJURIES). As this analysis tries to measure the impact of events, observations with no fatalities and injuries (and thus no impact) are excluded from the health subset. From there, we remove observations that describes summaries of multi-month events, because each multi-month event is already recorded in each month. Finally, the event types are standardized by mapping terms' variations into groups that describes similar events.
+
+``` {r subsettingForHealthQuestion, message=F, warning=F}
+
+stormdata_health <- stormdata[,c("EVTYPE", "FATALITIES", "INJURIES")]
+
+# filter the 0 and NA data as we're only interested in top X observations
+stormdata_health <- subset(stormdata_health, (!is.na(FATALITIES) & FATALITIES > 0) | (!is.na(INJURIES) & INJURIES > 0))
+
+# filter summaries event type as they represent cumulative of events, which are already recorded individually.
+stormdata_health <- stormdata_health[grep('Summary', stormdata_health$EVTYPE, invert=TRUE),]
+
+# EVTYPE has many variations, standardize them before aggregating
+stormdata_health <- clean_event(stormdata_health)
+
+
+```
+
+
+The subset for economy analysis shall contain the event type (EVTYPE), property damage (PROPDMG and PROPDMGEXP), and crop damage (CROPDMG, CROPDMGEXP). Like with health impact, observations with no damage shall be excluded from the subset, as they do not contribute to the comparisons. From there, we remove observations that describes summaries of multi-month events, because each multi-month event is already recorded in each month. Finally, the event types are standardized by mapping terms' variations into groups that describes similar events.
+
+
+``` {r subsettingForEconomyQuestion, message=F, warning=F}
+
+stormdata_economy <- stormdata[,c("EVTYPE", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")]
+
+# filter the 0 and NA data as we're only interested in top X observations
+stormdata_economy <- subset(stormdata_economy, (!is.na(PROPDMG) & PROPDMG > 0) | (!is.na(CROPDMG) & CROPDMG > 0))
+
+# filter summaries event type as they represent cumulative of events, which are already recorded individually.
+stormdata_economy <- stormdata_economy[grep('Summary', stormdata_economy$EVTYPE, invert=TRUE),]
+
+# EVTYPE has many variations, standardize them before aggregating
+stormdata_economy <- clean_event(stormdata_economy)
+
+```
+
+### Analysis
+
+The health impact on population is measured by creating a score that is the number of fatalities added by the number of injuries. This score is merged back into the health data subset, and subsequently the top 10 of the events are taken out to be presented.
+
+
+``` {r processingFirstQuestion, message=F, warning=F}
+
+# start calculating score
+health_impact_score <- stormdata_health$FATALITIES + stormdata_health$INJURIES
+stormdata_health <- cbind(stormdata_health, health_impact_score)
+
+# aggregate, then sort, get top 10 and reorder the data for presentation
+health_score <- aggregate(stormdata_health$health_impact_score, by=list(event=stormdata_health$EVTYPE), FUN=sum, na.rm = TRUE)
+
+health_score <- health_score[order(-health_score$x),]
+top_10_health_score <- health_score[1:10,]
+top_10_health_score <- transform(top_10_health_score, event = reorder(event,x))
+
+```
+
+The economical damage of an event is measured by adding the damage to the property and damage to the crop. A function calculateDamage is created to handle the calculation of the total damage.
+
+``` {r processingSecondquestion, message=F, warning=F, cache=TRUE}
+
+calculateDamage <- function(dataframe){
+    length <- nrow(dataframe)
+    
+    propertyDmg <- numeric(length)
+    cropDmg <- numeric(length)
+    
+    for(i in 1:length){
+        if (!is.na(dataframe[i,"PROPDMG"])){
+            if (dataframe[i,"PROPDMGEXP"] == 'B'){
+                propertyDmg[i] = dataframe[i,"PROPDMG"] * 1000000000
+            } else if(dataframe[i,"PROPDMGEXP"] == 'h' | dataframe[i,"PROPDMGEXP"] == 'H') {
+                propertyDmg[i] = dataframe[i,"PROPDMG"] * 100
+            } else if(dataframe[i,"PROPDMGEXP"] == 'm' | dataframe[i,"PROPDMGEXP"] == 'M') {
+                propertyDmg[i] = dataframe[i,"PROPDMG"] * 1000000
+            } else if(dataframe[i,"PROPDMGEXP"] == 'K') {
+                propertyDmg[i] = dataframe[i,"PROPDMG"] * 1000
+            } else {
+                propertyDmg[i] = 0
+            }            
+        } else {
+            propertyDmg[i] = 0
+        }
+        
+        if (!is.na(dataframe[i,"CROPDMG"])){
+            if (dataframe[i,"CROPDMGEXP"] == 'B'){
+                cropDmg[i] = dataframe[i,"CROPDMG"] * 1000000000
+            } else if(dataframe[i,"CROPDMGEXP"] == 'h' | dataframe[i,"CROPDMGEXP"] == 'H') {
+                cropDmg[i] = dataframe[i,"CROPDMG"] * 100
+            } else if(dataframe[i,"CROPDMGEXP"] == 'm' | dataframe[i,"CROPDMGEXP"] == 'M') {
+                cropDmg[i] = dataframe[i,"CROPDMG"] * 1000000
+            } else if(dataframe[i,"CROPDMGEXP"] == 'K') {
+                cropDmg[i] = dataframe[i,"CROPDMG"] * 1000
+            } else {
+                cropDmg[i] = 0
+            }            
+        } else {
+            cropDmg[i] = 0
+        }
+    }
+    
+    totalDmg <- propertyDmg + cropDmg;
+    
+    return(totalDmg)
+}
+
+# total damage
+totalDamage <- calculateDamage(stormdata_economy)
+stormdata_economy <- cbind(stormdata_economy, totalDamage)
+
+# aggregate, then sort, get top 10 and reorder the data for presentation
+aggregatedDamage <- aggregate(stormdata_economy$totalDamage, by=list(event=stormdata_economy$EVTYPE), FUN=sum, na.rm=TRUE)
+
+aggregatedDamage <- aggregatedDamage[order(-aggregatedDamage$x),]
+top_10_aggregatedDamage <- aggregatedDamage[1:10,]
+top_10_aggregatedDamage <- transform(top_10_aggregatedDamage, event = reorder(event,x))
+
+```
+
+
+
+## Results
+
+The result of the analysis on the population health is shown in the graph below.
+
+``` {r firstQuestionChart, message=F, warning=F}
+
+library(ggplot2)
+g <- ggplot(top_10_health_score, aes(x=event, y=x))
+p <- g + geom_bar(stat="identity") + ylab("Negative Impact Score on Population") + xlab("Event") + ggtitle("Top 10 Events With Negative Impact On Population Health.") + coord_flip()
+print(p)
+
+```
+
+The graph indicates that Tornadoes, and similar events belonging to the Tornado group, have contributed far more than other events to the number of fatalities and injuries suffered by the population over the years.
+
+``` {r secondQuestionChart, message=F, warning=F}
+
+library(ggplot2)
+g <- ggplot(top_10_aggregatedDamage, aes(x=event, y=x))
+p <- g + geom_bar(stat="identity") + ylab("Total Economical Damage") + xlab("Event") + ggtitle("Top 10 Events With The Most Economical Damage") + coord_flip()
+options(scipen=999)
+print(p)
+
+```
+
+The graph shows that Flood is the event with the most economical damage.
+
+
+
